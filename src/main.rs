@@ -1,6 +1,6 @@
 use std::{fs, io};
 use std::io::Error;
-
+use std::collections::HashMap;
 
 // Quick helper function to read a filename to a Vec<usize>.
 fn read_to_vec_usize(filename: &str) -> Result<Vec<usize>, Error> {
@@ -16,7 +16,6 @@ fn day1_part1(list: Vec<usize>) -> Option<usize> {
     for i in &list {
         for x in &list {
             if i + x == 2020 {
-                println!("{} and {} == 2020", i, x);
                 return Some(i*x)
             }
         }
@@ -29,7 +28,6 @@ fn day1_part2(list: Vec<usize>) -> Option<usize> {
         for x in &list {
             for z in &list {
                 if i + x + z == 2020 {
-                    println!("{} {} and {} == 2020", i, x, z);
                     return Some(i*x*z)
                 }
             }
@@ -136,7 +134,7 @@ fn day3_part1() -> Result<usize, Error> {
 
     let mut map = TobogganTracker::new(lines);
     let mut hit_trees = 0;
-    while map.row+1 < map._max_row {
+    while map.row < map._max_row {
         map.move_pos(1, 3);
         if map.get_pos() == Some("#") {
             hit_trees += 1;
@@ -154,7 +152,7 @@ fn day3_part2() -> Result<usize, Error> {
     let mut results: (usize, usize, usize, usize, usize) = (0, 0, 0, 0, 0);
 
     // Slope of r1,d1
-    while map.row+1 < map._max_row {
+    while map.row < map._max_row {
         map.move_pos(1, 1);
         if map.get_pos() == Some("#") {
             results.0 += 1;
@@ -164,7 +162,7 @@ fn day3_part2() -> Result<usize, Error> {
     map.column = 0;
 
     // Slope of r3, d1
-    while map.row+1 < map._max_row {
+    while map.row < map._max_row {
         map.move_pos(1, 3);
         if map.get_pos() == Some("#") {
             results.1 += 1;
@@ -174,7 +172,7 @@ fn day3_part2() -> Result<usize, Error> {
     map.column = 0;
 
     // Slope of r5, d1
-    while map.row+1 < map._max_row {
+    while map.row < map._max_row {
         map.move_pos(1, 5);
         if map.get_pos() == Some("#") {
             results.2 += 1;
@@ -184,7 +182,7 @@ fn day3_part2() -> Result<usize, Error> {
     map.column = 0;
 
     // Slope of r7, d1
-    while map.row+1 < map._max_row {
+    while map.row < map._max_row {
         map.move_pos(1, 7);
         if map.get_pos() == Some("#") {
             results.3 += 1;
@@ -194,7 +192,7 @@ fn day3_part2() -> Result<usize, Error> {
     map.column = 0;
 
     // Slope of r1, d2
-    while map.row+1 < map._max_row {
+    while map.row < map._max_row {
         map.move_pos(2, 1);
         if map.get_pos() == Some("#") {
             results.4 += 1;
@@ -223,7 +221,7 @@ impl TobogganTracker<'_> {
             row: 0,
             column: 0,
             _max_column: l[0].len(),
-            _max_row: l.len(),
+            _max_row: l.len()-1,
             map: l,
         }
     }
@@ -247,9 +245,139 @@ impl TobogganTracker<'_> {
     }
 }
 
+
+/// Day 4 Solutions
+/// 
+/// Input is in a batch file of key:value pairs separated by spaces or newlines. Separate passports are separated by blank lines.
+/// 
+/// There are eight fields, byr, iyr, eyr, ght, hcl, ecl, pid, cid
+/// cid is optional, first problem is counting valid passports in the input file.
+fn day4_part1() -> Result<usize, Error> {
+    let input = fs::read_to_string("./day4_input.txt")?;
+    
+    let passports: Vec<HashMap<&str, &str>> = input.split("\n\n").map(|l| {
+        l.split_whitespace().filter_map(|entry| {
+            let mut split = entry.split(":");
+            if let (Some(k), Some(v)) = (split.next(), split.next()) {
+                Some((k, v))
+            } else {None}
+        }).collect()
+    }).collect();
+
+    let valid_passports = passports.iter().filter(|p| {
+        p.keys().filter(|k| **k != "cid").count() >= 7
+    }).count();
+    
+    Ok(valid_passports)
+}
+
+fn day4_part2() -> Result<usize, Error> {
+    let input = fs::read_to_string("./day4_input.txt")?;
+    
+    let passports: Vec<HashMap<&str, &str>> = input.split("\n\n").map(|l| {
+        l.split_whitespace().filter_map(|entry| {
+            let mut split = entry.split(":");
+            if let (Some(k), Some(v)) = (split.next(), split.next()) {
+                Some((k, v))
+            } else {None}
+        }).collect()
+    }).collect();
+
+    let valid_passports = passports.iter().filter(|p| {
+        validate_passport_fields(*p)
+    }).count();
+
+    Ok(valid_passports)
+}
+
+/// Checks if given passport has valid field values.
+fn validate_passport_fields(p: &HashMap<&str, &str>) -> bool {
+    // Check if passport has right number of min fields.
+    if p.keys().filter(|k|**k != "cid").count() < 7 {
+        return false
+    }
+    // Validate birth year field.
+    if let Some(byr) = p.get("byr") {
+        if let Ok(byr) = byr.parse::<usize>() {
+            if byr < 1920 || byr > 2002 {
+                return false
+            }
+        }
+    } else {return false}
+
+    // Validate issue year field.
+    if let Some(iyr) = p.get("iyr") {
+        if let Ok(iyr) = iyr.parse::<usize>() {
+            if iyr < 2010 || iyr > 2020 {
+                return false
+            }
+        } else {return false}
+    } else {return false}
+
+    // Validate Expiration year field.
+    if let Some(eyr) = p.get("eyr") {
+        if let Ok(eyr) = eyr.parse::<usize>() {
+            if eyr < 2020 || eyr > 2030 {
+                return false
+            }
+        } else {return false}
+    } else {return false}
+
+    // Validate height field.
+    if let Some(hgt) = p.get("hgt") {
+        // Handle inch height
+        if hgt.contains("in") {
+            if let Ok(hgt) = hgt[..2].parse::<usize>() {
+                if hgt < 59 || hgt > 76 {
+                    return false
+                }
+            } else {return false}
+        }
+        // Handle cm height
+        else if hgt.contains("cm") {
+            if let Ok(hgt) = hgt[..3].parse::<usize>() {
+                if hgt < 150 || hgt > 193 {
+                    return false
+                }
+            } else {return false}
+        }
+        else {
+            return false
+        }
+    } else {return false}
+
+    // Validate Hair color
+    if let Some(hcl) = p.get("hcl") {
+        // no regex, just manually set valid chars
+        let valid_chars = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'];
+        if hcl.len() != 7 || &hcl[..1] != "#" || hcl[1..].chars().filter(|c| valid_chars.contains(c)).count() != 6 {
+            return false
+        }
+    }
+
+    // Validate Eye color.
+    if let Some(ecl) = p.get("ecl") {
+        let valid_colors = ["amb", "blu", "brn", "gry", "grn", "hzl", "oth"];
+        if !valid_colors.contains(ecl) {
+            return false
+        }
+    } else {return false}
+
+    // Validate passport id.
+    if let Some(pid) = p.get("pid") {
+        if let Ok(_) = pid.parse::<usize>() {
+            if pid.len() != 9 {
+                return false
+            }
+        } else {return false}
+    } else {return false}
+    true
+}
+
 fn main() -> Result<(), std::io::Error> {
 
-    let answer = day3_part2();
-    println!("Day 2 answer is {:?}", answer);
+    let answer = day4_part2();
+
+    println!("Day 4 answer is {:?}", answer);
     Ok(())
 }

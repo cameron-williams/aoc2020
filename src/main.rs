@@ -1,6 +1,7 @@
+#![feature(iterator_fold_self)]
 use std::{fs, io};
 use std::io::Error;
-use std::collections::{HashMap, BTreeSet};
+use std::collections::{HashMap, HashSet};
 
 // Quick helper function to read a filename to a Vec<usize>.
 fn read_to_vec_usize(filename: &str) -> Result<Vec<usize>, Error> {
@@ -479,9 +480,45 @@ impl SeatRange {
     }
 }
 
+
+/// Day 6 Solutions
+/// 
+/// Takes an input of multiple groupings of strings of up to 26 letters a-z.
+/// Both parts are split up into a few different iterators for readability, could chain them all together if you wanted.
+/// Need to find how many unique letters are in each grouping of strings, each one only counting once.
+fn day6_part1() -> Result<usize, Error> {
+    let input = fs::read_to_string("./day6_input.txt")?;
+
+    let lines: Vec<HashSet<char>> = input.split("\n\n").map(|l| {
+        l.chars().filter(|c| *c != '\n').collect()
+    }).collect();
+
+    let total = lines.iter().fold(0, |tot, l| tot + l.len());
+    Ok(total)
+}
+
+/// Part 2 needs to identify which questions everyone answered yes to (all strings in group must share letter).
+fn day6_part2() -> Result<usize, Error> {
+    let input = fs::read_to_string("./day6_input.txt")?;
+
+    let lines: Vec<HashSet<char>> = input.split("\n\n").filter_map(|l| {
+        l.split("\n")
+            .map(|ln| {
+                ln.chars().collect()
+            })
+            .fold_first(|t, hs: HashSet<char>| {
+                t.intersection(&hs).cloned().collect()
+            })
+    }).collect();
+
+    let total = lines.iter().fold(0, |tot, l| tot + l.len());
+    Ok(total)
+}
+
+
 fn main() -> Result<(), std::io::Error> {
 
-    let answer = day5_part2();
+    let answer = day6_part2();
 
     println!("Day 5 answer is {:?}", answer);
     Ok(())
